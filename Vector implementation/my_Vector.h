@@ -2,138 +2,196 @@
 
 #include <memory>
 
-template<typename my_Vector>
-class my_Iterator
+
+template <typename Type, typename Allocator = std::allocator<Type>>
+class my_Vector_Storage
 {
+protected:
+	Pointer_Type m_data = nullptr;
+	size_t m_size = 0;
+	size_t m_capacity = 0;
 
-public:
-
-	using ValueType = typename my_Vector::ValueType;
-	using Pointer_Type = ValueType*;
-	using ReferenceType = ValueType&;
-
-	my_Iterator(Pointer_Type ptr) : m_ptr(ptr)
-	{
-
-	}
-
-	my_Iterator& operator++()
-	{
-		m_ptr++;
-		return *this;
-	}
-
-	my_Iterator operator++(int)
-	{
-		my_Iterator temp = *this;
-		++(*this);
-		return temp;
-	}
-
-	my_Iterator& operator--()
-	{
-
-		m_ptr--;
-		return *this;
-	}
-
-	my_Iterator operator--(int)
-	{
-		my_Iterator temp = *this;
-		--(*this);
-		return temp;
-	}
-
-	my_Iterator& operator=(my_Iterator& other)
-	{
-		other.m_ptr = m_ptr;
-		return *this;
-	}
-
-	ReferenceType operator[](size_t index)
-	{
-		return *(m_ptr + index);
-	}
-
-	Pointer_Type operator->()
-	{
-		return m_ptr;
-	}
-
-	ReferenceType operator*()
-	{
-		return *m_ptr;
-	}
-
-	bool operator==(const my_Iterator& other) const
-	{
-		return m_ptr == other.m_ptr;
-	}
-
-	bool operator!=(const my_Iterator& other) const
-	{
-		return m_ptr != other.m_ptr;
-	}
+	Allocator al;
 
 
-	
-	my_Iterator operator+(size_t index)
-	{
-		my_Iterator temp = *this;
-		this += index;
-		return temp;
-	}
+	my_Vector_Storage() = default;
 
+	my_Vector_Storage(size_t o_size) : m_capacity(o_size), m_data(al.allocate(m_capacity))
+	{}
 
-	my_Iterator operator-(size_t index)
-	{
-		my_Iterator temp = *this;
-		this -= index;
-		return temp;
-	}
+	my_Vector_Storage(my_Vector_Storage<Type, Allocator>&& other) noexcept;
 
-	my_Iterator& operator+=(size_t index)
-	{
-		m_ptr += index;
-		return *this;
-	}
+	inline void swap(my_Vector_Storage<Type, Allocator>& other) noexcept;
 
+	~my_Vector_Storage();
 
-	my_Iterator& operator-=(size_t index)
-	{
-		m_ptr -= index;
-		return *this;
-	}
-
-
-	/*my_Iterator operator+(const my_Iterator& other)
-	{
-		my_Iterator temp = *this;
-		this += index;
-		return temp;
-	}
-
-
-	my_Iterator operator-(const my_Iterator& other)
-	{
-		my_Iterator temp = *this;
-		this -= index;
-		return temp;
-	}*/
-
-	
-
-
-private:
-	Pointer_Type m_ptr;
 };
 
 
+template<typename Type, typename Allocator>
+inline my_Vector_Storage<Type, Allocator>::my_Vector_Storage(my_Vector_Storage<Type, Allocator>&& other)
+{
+	swap(*this, other);
+}
+
+template<typename Type, typename Allocator>
+inline void my_Vector_Storage<Type, Allocator>::swap(my_Vector_Storage<Type, Allocator>& other)
+{
+	std::swap(m_data, other.m_data);
+	std::swap(m_size, other.m_size);
+	std::swap(m_capacity, other.m_capacity);
+}
+
+template<typename Type, typename Allocator>
+inline my_Vector_Storage<Type, Allocator>::~my_Vector_Storage()
+{
+	for (size_t i = 0; i < m_size; i++)
+	{
+		al.destroy(m_data + i);
+	}
+	al.deallocate(m_data, m_capacity);
+}
 
 template <typename Type, typename Allocator = std::allocator<Type>>
-class my_Vector
+class my_Vector : private my_Vector_Storage<Type, Allocator>
 {
 public:
+
+	template<typename my_Vector>
+	class my_Iterator
+	{
+
+	public:
+
+		using ValueType = typename my_Vector::ValueType;
+		using Pointer_Type = ValueType*;
+		using ReferenceType = ValueType&;
+
+		my_Iterator(Pointer_Type ptr) : m_ptr(ptr)
+		{
+
+		}
+
+		my_Iterator& operator++()
+		{
+			m_ptr++;
+			return *this;
+		}
+
+		my_Iterator operator++(int)
+		{
+			my_Iterator temp = *this;
+			++(*this);
+			return temp;
+		}
+
+		my_Iterator& operator--()
+		{
+
+			m_ptr--;
+			return *this;
+		}
+
+		my_Iterator operator--(int)
+		{
+			my_Iterator temp = *this;
+			--(*this);
+			return temp;
+		}
+
+		my_Iterator& operator=(my_Iterator& other)
+		{
+			other.m_ptr = m_ptr;
+			return *this;
+		}
+
+		ReferenceType operator[](size_t index)
+		{
+			return *(m_ptr + index);
+		}
+
+		Pointer_Type operator->()
+		{
+			return m_ptr;
+		}
+
+		ReferenceType operator*()
+		{
+			return *m_ptr;
+		}
+
+		bool operator==(const my_Iterator& other) const
+		{
+			return m_ptr == other.m_ptr;
+		}
+
+		bool operator!=(const my_Iterator& other) const
+		{
+			return m_ptr != other.m_ptr;
+		}
+
+
+
+		my_Iterator operator+(size_t index)
+		{
+			my_Iterator temp = *this;
+			this += index;
+			return temp;
+		}
+
+
+		my_Iterator operator-(size_t index)
+		{
+			my_Iterator temp = *this;
+			this -= index;
+			return temp;
+		}
+
+		my_Iterator& operator+=(size_t index)
+		{
+			m_ptr += index;
+			return *this;
+		}
+
+
+		my_Iterator& operator-=(size_t index)
+		{
+			m_ptr -= index;
+			return *this;
+		}
+
+
+		/*my_Iterator operator+(const my_Iterator& other)
+		{
+			my_Iterator temp = *this;
+			this += index;
+			return temp;
+		}
+
+
+		my_Iterator operator-(const my_Iterator& other)
+		{
+			my_Iterator temp = *this;
+			this -= index;
+			return temp;
+		}*/
+
+
+
+
+	private:
+		Pointer_Type m_ptr;
+	};
+
+
+protected:
+
+	using my_Vector_Storage<Type, Allocator>::m_capacity;
+	using my_Vector_Storage<Type, Allocator>::m_size;
+	using my_Vector_Storage<Type, Allocator>::m_data;
+	using my_Vector_Storage<Type, Allocator>::al;
+
+
 	using ValueType = Type;
 	using Pointer_Type = Type*;
 	using ReferenceType = Type&;
@@ -142,40 +200,38 @@ public:
 
 
 public:
-	my_Vector() : m_size(0), m_capacity(4)
-	{
-		m_data = al.allocate(m_capacity);
-	}
+	
+	my_Vector() = default;
+
+	my_Vector(my_Vector&&) = default;
+
+	my_Vector& operator=(my_Vector&&) = default;
+
+
+
 
 	my_Vector(size_t size);
 
-	my_Vector(size_t n_arg, ReferenceType value);
+	my_Vector(size_t n_arg, const ReferenceType value);
 
-	my_Vector(const my_Vector<Type, Allocator>& other);
-	
-	my_Vector(my_Vector<Type, Allocator>&& other);
+	my_Vector(const my_Vector<Type, Allocator>& other) = delete;
 
 	my_Vector(std::initializer_list<Type> list);
 
-	~my_Vector();
+	template<typename = std::void_t<decltype(Iterator{}++), decltype(*Iterator{})>>
+	my_Vector(Iterator start, Iterator end);
 
-	void operator=(const my_Vector<Type, Allocator>& other);
+	~my_Vector() = default;
 
-	void operator=(my_Vector<Type, Allocator>&& other);
+	void operator=(const my_Vector<Type, Allocator>& other) = delete;
+
+	my_Vector<Type, Allocator> operator=(my_Vector<Type, Allocator>&& other) noexcept;
 
 
 	void operator=(std::initializer_list<Type> list);
 
 
-	void swap(my_Vector<Type, Allocator>& other);
-
-
 	void reserve(unsigned capacity_new);
-
-
-	//void push_back(Type value);
-
-	//void push_back(Pointer_Type value);
 
 	void push_back(ReferenceType value);
 
@@ -191,10 +247,6 @@ public:
 
 	void pop_front();
 
-	//void insert(Type value, size_t place);
-
-	//void insert(Pointer_Type value, size_t place);
-
 	void insert(ReferenceType value, size_t place);
 
 	void insert(MoveType value, size_t place);
@@ -202,8 +254,7 @@ public:
 	void erase(size_t place);
 	
 	template <class... Args>
-	void emplace(my_Vector::Iterator Iter, Args&&... args);
-
+	void emplace(my_Vector::Iterator Iter, Args&&...args);
 
 	void clear();
 
@@ -234,22 +285,16 @@ public:
 		return Iterator(m_data+m_size);
 	}
 
-
-private:
-
-	Pointer_Type m_data = nullptr;
-	size_t m_size;
-	size_t m_capacity;
-
-	Allocator al;
 	
 
 
 
 };
 
+
+
 template<typename Type, typename Allocator>
-inline my_Vector<Type, Allocator>::my_Vector(size_t size) : m_size(size), m_capacity(size * 2)
+inline my_Vector<Type, Allocator>::my_Vector(size_t size) : my_Vector_Storage<Type, Allocator>{size}
 {
 	m_data = al.allocate(m_capacity);
 	for (size_t i = 0; i < m_size; i++)
@@ -263,7 +308,7 @@ inline my_Vector<Type, Allocator>::my_Vector(size_t size) : m_size(size), m_capa
 }
 
 template<typename Type, typename Allocator>
-inline my_Vector<Type, Allocator>::my_Vector(size_t n_arg, ReferenceType value) : m_size(n_arg), m_capacity(n_arg * 2)
+inline my_Vector<Type, Allocator>::my_Vector(size_t n_arg, const ReferenceType value) : m_size(n_arg), m_capacity(n_arg * 2)
 {
 	m_data = al.allocate(m_capacity);
 	for (size_t i = 0; i < m_size; i++)
@@ -273,23 +318,13 @@ inline my_Vector<Type, Allocator>::my_Vector(size_t n_arg, ReferenceType value) 
 
 }
 
-template<typename Type, typename Allocator>
-inline my_Vector<Type, Allocator>::my_Vector(const my_Vector<Type, Allocator>& other) : m_size(other.m_size), m_capacity(other.m_capacity)
-{
-	m_data = al.allocate(m_capacity);
-}
+//template<typename Type, typename Allocator>
+//inline my_Vector<Type, Allocator>::my_Vector(const my_Vector<Type, Allocator>& other) : m_size(other.m_size), m_capacity(other.m_capacity)
+//{
+//	m_data = al.allocate(m_capacity);
+//}
 
-template<typename Type, typename Allocator>
-inline my_Vector<Type, Allocator>::my_Vector(my_Vector<Type, Allocator>&& other)
-{
-	m_data = other.m_data;
-	m_size = other.m_size;
-	m_capacity = other.m_capacity;
 
-	other.m_data = nullptr;
-	other.m_size = 0;
-	other.m_capacity = 0;
-}
 
 template<typename Type, typename Allocator>
 inline my_Vector<Type, Allocator>::my_Vector(std::initializer_list<Type> list) : m_size(list.size()), m_capacity(m_size*2)
@@ -302,42 +337,35 @@ inline my_Vector<Type, Allocator>::my_Vector(std::initializer_list<Type> list) :
 	}
 }
 
-template<typename Type, typename Allocator>
-inline my_Vector<Type, Allocator>::~my_Vector()
-{
-	for (size_t i = 0; i < m_size; i++)
-	{
-		al.destroy(m_data + i);
-	}
-	al.deallocate(m_data, m_capacity);
-}
 
-template<typename Type, typename Allocator>
-inline void my_Vector<Type, Allocator>::operator=(const my_Vector<Type, Allocator>& other)
-{
-	my_Vector temp(other);
-	swap(temp);
-	return *this;
-}
 
-template<typename Type, typename Allocator>
-inline void my_Vector<Type, Allocator>::operator=(my_Vector<Type, Allocator>&& other)
-{
+//template<typename Type, typename Allocator>
+//inline void my_Vector<Type, Allocator>::operator=(const my_Vector<Type, Allocator>& other)
+//{
+//	my_Vector temp(other);
+//	swap(temp);
+//	return *this;
+//}
 
-	if (this == &other)
-	{
-		return;
-	}
-	al.deallocate(m_data, m_capacity);
-
-	m_data = other.m_data;
-	m_size = other.m_size;
-	m_capacity = other.m_capacity;
-
-	other.m_data = nullptr;
-	other.m_size = 0;
-	other.m_capacity = 0;
-}
+//template<typename Type, typename Allocator>
+//inline my_Vector<Type, Allocator> my_Vector<Type, Allocator>::operator=(my_Vector<Type, Allocator>&& other)
+//{
+//
+//	if (this == &other)
+//	{
+//		return;
+//	}
+//	swap(*this, other);
+//	/*al.deallocate(m_data, m_capacity);
+//
+//	m_data = other.m_data;
+//	m_size = other.m_size;
+//	m_capacity = other.m_capacity;
+//
+//	other.m_data = nullptr;
+//	other.m_size = 0;
+//	other.m_capacity = 0;*/
+//}
 
 template<typename Type, typename Allocator>
 inline void my_Vector<Type, Allocator>::operator=(std::initializer_list<Type> list)
@@ -353,17 +381,12 @@ inline void my_Vector<Type, Allocator>::operator=(std::initializer_list<Type> li
 	m_size = list.size();
 }
 
-template<typename Type, typename Allocator>
-inline void my_Vector<Type, Allocator>::swap(my_Vector<Type, Allocator>& other)
-{
-	std::swap(m_data, other.m_data);
-	std::swap(m_size, other.m_size);
-	std::swap(m_capacity, other.m_capacity);
-}
+
 
 template<typename Type, typename Allocator>
 inline void my_Vector<Type, Allocator>::reserve(unsigned capacity_new)
 {
+	
 	Pointer_Type temp = al.allocate(capacity_new);
 	if (capacity_new > m_capacity)
 	{
@@ -381,7 +404,7 @@ inline void my_Vector<Type, Allocator>::reserve(unsigned capacity_new)
 	}
 	if (m_data != nullptr)
 	{
-		al.deallocate(m_data, m_size);
+ 		al.deallocate(m_data, m_size);
 	}
 	m_size = (m_size > capacity_new ? capacity_new : m_size);
 	m_capacity = capacity_new;
@@ -406,11 +429,6 @@ inline void my_Vector<Type, Allocator>::reserve(unsigned capacity_new)
 //	}
 //}
 
-//template<typename Type, typename Allocator>
-//inline void my_Vector<Type, Allocator>::push_back(Pointer_Type value)
-//{
-//	size_t i = 8 * 7;
-//}
 
 template<typename Type, typename Allocator>
 inline void my_Vector<Type, Allocator>::push_back(ReferenceType value)
@@ -676,10 +694,37 @@ inline void my_Vector<Type, Allocator>::clear()
 }
 
 
+template<typename Type, typename Allocator>
+template<typename>
+inline my_Vector<Type, Allocator>::my_Vector(Iterator start, Iterator end)
+{
+	int size = std::distance(start, end);
+	reserve(size);
+	std::memcpy(m_data, start, size);
+}
+
 //rewrite with std:forward
 template<typename Type, typename Allocator>
-template<class ...Args>
-inline void my_Vector<Type, Allocator>::emplace(my_Vector::Iterator Iter, Args && ...args)
+template<typename ...Args>
+inline void my_Vector<Type, Allocator>::emplace(my_Vector::Iterator Iter, Args&&...args)
 {
+	if (m_capacity >= m_size)
+	{
+		if (m_capacity == m_size)
+		{
+			reserve(m_size * 2);
+		}
+		int place = 0;
+		auto finish = end();
+		auto temp = finish;
+		for (auto i = finish; i != Iter; --i)
+		{
+			place++;
+			finish = --temp;
+		}
+		erase(m_data + (m_size - place));
+		al.construct(m_data + (m_size - place), Type(std::forward<Args>(args)...));
+		m_size++;
+	}
 
 }

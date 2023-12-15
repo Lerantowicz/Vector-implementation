@@ -4,6 +4,7 @@
 #include <chrono>
 
 #include "my_Vector.h"
+#include "my_Allocator.h"
 
 class Point
 {
@@ -76,16 +77,37 @@ void test_3();
 
 void test_4(int size);
 
+void test_5();
+
 int main()
 {
-	std::allocator<int> al;
-	al.deallocate();
-	auto start = std::chrono::steady_clock::now();
-	test_4(10000);
-	auto end = std::chrono::steady_clock::now();
-	std::cout << "Elapsed time in seconds: "
-		<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-		<< " ms";
+	//int size = 5;
+	//my_Allocator<int> al;
+	//int* a = al.allocate(size);
+
+	//print(a, a+size);
+	//al.construct(a, 0);
+	//print(a, a + size);
+
+	std::vector<Point> a(10, Point(0, 0));
+	a.reserve(20);
+	a.emplace(std::vector<Point>::iterator(a.begin()), 3,3);
+
+
+
+	std::cout << "----------------------------\n";
+	//auto start = std::chrono::steady_clock::now();
+	//test_4(10000);
+	//auto end = std::chrono::steady_clock::now();
+	//std::cout << "Elapsed time in seconds: "
+	//	<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+	//	<< " ms";
+
+
+
+	my_Vector<Point> arr(10, Point(0,0));
+	arr.reserve(20);
+	arr.emplace(my_Vector<Point>::Iterator(arr.begin()), 5,5);
 
 }
 
@@ -161,4 +183,14 @@ void test_4(int size)
 	{
 		arr.push_back(i);
 	}
+}
+
+
+void test_5()
+{
+	my_Vector<int> a(10,5);
+
+
+
+
 }
