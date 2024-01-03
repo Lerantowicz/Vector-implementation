@@ -1,196 +1,67 @@
-#include <vector>
-#include <iostream>
-#include <algorithm>
-#include <chrono>
-
 #include "my_Vector.h"
-#include "my_Allocator.h"
+#include <vector>
+#include <string>
+#include <iostream>
 
-class Point
+template<typename Iter, typename Modifier>
+void fill(Iter begin, Iter end, Iter other, Modifier func = [](auto&& value) {return value; })
 {
-
-
-
-public:
-	int x, y;
-
-	Point()
+	for (; begin != end; ++begin, ++other)
 	{
-		x = 5;
-		y = 8;
-		std::cout << "default\n";
-	}
-
-
-	Point(int x, int y) : x(x), y(y)
-	{
-		std::cout << "tp\n";
-	}
-
-	Point(const Point&& other) noexcept : x(other.x), y(other.y)
-	{
-		std::cout << "move\n";
-	}
-
-	Point(const Point& other) : x(other.x), y(other.y)
-	{
-		std::cout << "copy\n";
-	}
-
-	void operator=(const Point& other)
-	{
-		x = other.x;
-		y = other.y;
-	}
-
-	void operator=(Point&& other) noexcept
-	{
-		x = other.x;
-		y = other.y;
-	}
-	friend std::ostream& operator<<(std::ostream& out, const Point& show) 
-	{
-		out << "x - " << show.x << " y - " << show.y << '\n';
-		return out;
-	}
-};
-
-
-
-
-
-
-template<typename T>
-void print(T start, T end)
-{
-	for (auto i = start; i != end; i++)
-	{
-		std::cout << *(*i) << '\n';
+		*other = func(*begin);
 	}
 }
 
-//void test_1();
-//
-//void test_2();
+struct string_vector
+{
+	std::string str;
+	my_Vector<int> vec;
+	std::pair<int, int> answers;
+};
 
-void test_3();
-
-void test_4(int size);
-
-void test_5();
+std::vector<string_vector> proper_names
+{
+	string_vector{"default constructor", my_Vector<int>(), std::pair(0, 4)},
+	string_vector{"one element constructor", my_Vector<int>(1), std::pair(1, 4)},
+	string_vector{"two element constructor", my_Vector<int>(5, 5), std::pair(5, 10)},
+	string_vector{"initializer list", my_Vector<int>{1, 2, 3, 4}, std::pair(4, 4)}
+};
 
 int main()
 {
-	//int size = 5;
-	//my_Allocator<int> al;
-	//int* a = al.allocate(size);
+	std::vector<int> vec_int(10, 10);
 
-	//print(a, a+size);
-	//al.construct(a, 0);
-	//print(a, a + size);
+	fill(vec_int.begin(), vec_int.end(), )
 
-	std::vector<Point> a(10, Point(0, 0));
-	a.reserve(20);
-	a.emplace(std::vector<Point>::iterator(a.begin()), 3,3);
+	my_Vector<int> string_vector;
+	size_t size = 5;
 
-
-
-	std::cout << "----------------------------\n";
-	//auto start = std::chrono::steady_clock::now();
-	//test_4(10000);
-	//auto end = std::chrono::steady_clock::now();
-	//std::cout << "Elapsed time in seconds: "
-	//	<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-	//	<< " ms";
-
-
-
-	my_Vector<Point> arr(10, Point(0,0));
-	arr.reserve(20);
-	arr.emplace(my_Vector<Point>::Iterator(arr.begin()), 5,5);
-
-}
-
-//void test_1()
-//{
-//	my_Vector<Point> ar;
-//	Point a;
-//	ar.push_back(Point());
-//	ar.push_back(Point(1, 2));
-//	ar.push_front(Point(-1, -2));
-//	ar.push_back(Point(a));
-//	ar.push_back(a);
-//	ar.insert(Point(5, 5), 2);
-//	ar.insert(Point(6, 6), 2);
-//	ar.push_front(Point(-11, -22));
-//	ar.push_front(Point(-111, -222));
-//	ar.push_back(a);
-//	ar.insert(Point(7, 7), 2);
-//	ar.insert(Point(8, 8), 2);
-//	ar.push_back(a);
-//	ar.insert(Point(0, 0), 0);
-//	ar.insert(Point(10, 10), ar.get_size());
-//
-//	print(ar.begin(), ar.end());
-//	std::cout << "\n----------------------------------------------------\n";
-//	ar.pop_back();
-//	ar.pop_back();
-//
-//	print(ar.begin(), ar.end());
-//	std::cout << "\n----------------------------------------------------\n";
-//
-//	ar.pop_front();
-//	ar.pop_front();
-//
-//	print(ar.begin(), ar.end());
-//	std::cout << "\n----------------------------------------------------\n";
-//
-//	ar.erase(0);
-//	ar.erase(ar.get_size());
-//	ar.erase(3);
-//	ar.erase(1);
-//
-//	print(ar.begin(), ar.end());
-//	std::cout << "\n----------------------------------------------------\n";
-//
-//}
-//
-//void test_2()
-//{
-//	my_Vector<int> arr = {1,2,3,4,5};
-//	arr = {5,4,3,2};
-//	arr = { 5,4,3,2 ,6,7,8,8,8,8,8,8};
-//	arr = { 1 };
-//}
-
-void test_3()
-{
-	int a = 5;
-	int* b = &a;
-	my_Vector<int*> arr = {new int(1), new int(2), new int(3), new int(4), new int(5) };
-	arr = { new int(5) };
-	arr = { new int(1), new int(2), new int(3), new int(4), new int(5),new int(1), new int(2), new int(3), new int(4), new int(5) };
-	arr.push_back(b);
-	arr.insert(&a, 4);
-	arr.push_front(new int(100000));
-	print(arr.begin(), arr.end());
-}
-
-void test_4(int size)
-{
-	my_Vector<int> arr(5);
-	for (int i = 0; i < size; i++)
+	for (size_t i = 0; i < size; i++)
 	{
-		arr.push_back(i);
+		string_vector.push_back(1);
+		string_vector.push_front(2);
 	}
-}
+
+	for (size_t i = 0; i < size; i++)
+	{
+		string_vector.pop_back();
+		string_vector.pop_front();
+	}
+	string_vector.shrink_to_fit();
 
 
-void test_5()
-{
-	my_Vector<int> a(10,5);
+	std::cout << sizeof(string_vector);
+	std::cout << sizeof(std::string);
+	std::cout << sizeof(my_Vector<int>);
+	std::cout << sizeof(std::pair<int, int>);
 
+	my_Vector<int> a{1, 2, 3, 4};
+	my_Vector<int> b(1);
+	my_Vector<int> c(10000);
+	my_Vector<int> d(10, 10);
+	my_Vector<int> e(my_Vector<int>(1));
+	my_Vector<int> f;
+	my_Vector<int> move_constructed = my_Vector<int>(1, 2);
 
-
-
+	return 0;
 }
