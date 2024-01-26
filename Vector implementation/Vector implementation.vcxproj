@@ -134,6 +134,9 @@
   <ItemGroup>
     <ClInclude Include="my_Vector.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="progress.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
