@@ -1,5 +1,7 @@
 #include "my_Vector.h"
 #include <vector>
+#include <string>
+#include <iostream>
 
 using namespace my_Namespace;
 
@@ -15,8 +17,9 @@ void print(Iter begin, Iter end)
 int main()
 {
 	std::vector<std::string> a{ "a", "b", "c", "d" };
-	my_Vector<std::string> b;
-	b.assign(a.begin(), a.end());
-	print(b.begin(), b.end());
+	std::allocator<std::string> al;
+	auto b = al.allocate(4);
+	std::uninitialized_copy(a.begin(), a.end(), b);
+	print(b, b + 4);
 	return 0;
 }
