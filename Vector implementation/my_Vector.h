@@ -66,9 +66,10 @@ protected:
 };
 
 template<typename Type, typename Allocator>
-my_VectorStorage<Type, Allocator>::my_VectorStorage() : m_size(0), m_capacity(m_min_capacity)
+my_VectorStorage<Type, Allocator>::my_VectorStorage() : m_size(0), m_capacity(0)
 {
-	m_data = al.allocate(m_capacity);
+	m_capacity = m_min_capacity;
+	m_data = al.allocate(m_min_capacity);
 }
 
 template<typename Type, typename Allocator>
@@ -94,7 +95,7 @@ my_VectorStorage<Type, Allocator>::my_VectorStorage(size_type size) : m_size(siz
 template<typename Type, typename Allocator>
 my_VectorStorage<Type, Allocator>::my_VectorStorage(std::initializer_list<Type> list) : m_size(list.size())
 {
-	m_capacity = list.size() > m_min_capacity ? list.size() * m_capacity_modifier : m_min_capacity;
+	m_capacity = m_size > m_min_capacity ? m_size * m_capacity_modifier : m_min_capacity;
 	m_data = al.allocate(m_capacity);
 }
 
@@ -258,7 +259,7 @@ public:
 	my_Vector(const my_Vector<Type, Allocator>& other); /* {}*/
 	my_Vector(my_Vector<Type, Allocator>&& other) noexcept; /*  {}*/
 	my_Vector(std::initializer_list<Type> list); /* {}*/
-	template<typename Iterator, typename = std::void_t<decltype(Iterator{}++), decltype(*Iterator{}) >>
+	template<typename Iterator, typename = std::void_t<decltype(Iterator{}+1), decltype(*Iterator{}) >>
 	my_Vector(Iterator start, Iterator end);
 	
 	~my_Vector();
@@ -270,7 +271,7 @@ public:
 	void assign(std::initializer_list<Type> list);
 	void assign(size_type n_arg, const_reference value);
 	// here check if iterator
-	template<typename Iterator, typename = std::void_t<decltype(Iterator{}++), decltype(*Iterator{}) >>
+	template<typename Iterator, typename = std::void_t<decltype(Iterator{}+1), decltype(*Iterator{}) >>
 	void assign(Iterator first, Iterator last);
 
 	allocator_type get_allocator() const noexcept;
@@ -321,9 +322,6 @@ public:
 	iterator erase(const_iterator first, const_iterator last);
 
 	template <class... Args>
-	void pretty_emplace(iterator iter, Args&&...args);
-
-	template <class... Args>
 	iterator emplace(iterator iter, Args&&...args);
 
 	template <class... Args>
@@ -352,11 +350,11 @@ public:
 	const_reverse_iterator crend() const noexcept { return const_reverse_iterator(m_data + m_size); }
 
 	private:
-		pointer reallocate_if_small(size_type size);
-
 		void increase_capacity();
 
 		void clear_old_memory();
+
+		void reserve_body(size_type size);
 
 };
 
@@ -397,24 +395,19 @@ template<typename Type, typename Allocator>
 my_Vector<Type, Allocator>::my_Vector(std::initializer_list<Type> list) 
 	: my_VectorStorage<Type, Allocator>(list)
 {
-	std::uninitialized_copy(begin(), end(), list.begin());
+	std::uninitialized_copy(list.begin(), list.end(), begin());
 }
 
 template<typename Type, typename Allocator>
 template<typename Iterator, typename>
-inline my_Vector<Type, Allocator>::my_Vector(Iterator start, Iterator end)
+inline my_Vector<Type, Allocator>::my_Vector(Iterator start, Iterator end) 
+	: my_VectorStorage<Type, Allocator>(std::distance(start, end))
 {
 	if (start == end)
 	{
 		throw std::range_error("Iterators are equal");
 	}
-	size_type new_size = std::distance(start, end);
-	pointer new_data = reallocate_if_small(new_size);
-	std::uninitialized_copy(start, end, new_data);
-	clear_old_memory();
-	m_capacity = new_size * m_capacity_modifier;
-	m_data = new_data;
-	m_size = new_size;
+	std::uninitialized_copy(start, end, m_data);
 }
 
 template<typename Type, typename Allocator>
@@ -433,50 +426,62 @@ void my_Vector<Type, Allocator>::operator=(const my_Vector<Type, Allocator>& oth
 template<typename Type, typename Allocator>
 void my_Vector<Type, Allocator>::operator=(std::initializer_list<Type> list)
 {
-	size_type new_size = list.size();
-	pointer new_data = reallocate_if_small(new_size);
-	std::uninitialized_copy(list.begin(), list.end(), new_data);
-	clear_old_memory();
-	m_capacity = new_size * m_capacity_modifier;
-	m_data = new_data;
-	m_size = new_size;
+	assign(list.begin(), list.end());
 }
 
 template<typename Type, typename Allocator>
 void my_Vector<Type, Allocator>::operator=(my_Vector<Type, Allocator>&& other) noexcept
 {
-	swap(*this, other);
+	swap(other);
 }
 
 
 template<typename Type, typename Allocator>
 void my_Vector<Type, Allocator>::assign(std::initializer_list<Type> list)
 {
-	operator=(list);
+	assign(list.begin(), list.end);
 }
 
 template<typename Type, typename Allocator>
 void my_Vector<Type, Allocator>::assign(size_type n_arg, const_reference value)
 {
-	pointer new_data = reallocate_if_small(n_arg);
-	std::uninitialized_fill(new_data, new_data + n_arg, value);
-	clear_old_memory();
-	m_capacity = n_arg * m_capacity_modifier;
-	m_data = new_data;
-	m_size = new_size;
+	if (n_arg > m_capacity)
+	{
+		size_type new_capacity = n_arg * m_capacity_modifier;
+		pointer new_data = al.allocate(new_capacity);
+		std::uninitialized_fill(new_data, new_data + n_arg, value);
+		clear_old_memory();
+		m_capacity = new_capacity;
+		m_data = new_data;
+	}
+	else
+	{
+		clear();
+		std::uninitialized_fill(m_data, m_data + n_arg, value);
+	}
+	m_size = n_arg;
 }
 
 template<typename Type, typename Allocator>
 template<typename Iterator, typename>
 void my_Vector<Type, Allocator>::assign(Iterator first, Iterator last)
 {
-	size_type new_size = std::distance(first, last);
-	pointer new_data = reallocate_if_small(new_size);
-	std::uninitialized_copy(first, last, new_data);
-	clear_old_memory();
-	m_capacity = new_size * m_capacity_modifier;
-	m_data = new_data;
-	m_size = new_size;
+	size_type arr_size = std::distance(first, last);
+	if (arr_size > m_capacity)
+	{
+		size_type new_capacity = arr_size * m_capacity_modifier;
+		pointer new_data = al.allocate(new_capacity);
+		std::uninitialized_copy(first, last, new_data);
+		clear_old_memory();
+		m_capacity = new_capacity;
+		m_data = new_data;
+	}
+	else
+	{
+		clear();
+		std::uninitialized_copy(first, last, m_data);
+	}
+	m_size = arr_size;
 }
 
 template<typename Type, typename Allocator>
@@ -597,12 +602,7 @@ void my_Vector<Type, Allocator>::reserve(size_type capacity_new)
 {
 	if (capacity_new > m_capacity)
 	{
-		pointer temp = al.allocate(capacity_new);
-		std::uninitialized_move(m_data, m_data + m_size, temp);
-		std::destroy(begin(), end());
-		al.deallocate(m_data, m_capacity);
-		m_capacity = capacity_new;
-		m_data = temp;
+		reserve_body(capacity_new);
 	}
 }
 
@@ -649,7 +649,7 @@ template<typename Type, typename Allocator>
 inline typename my_Vector<Type, Allocator>::iterator 
 my_Vector<Type, Allocator>::insert(const_iterator pos, move_type value)
 {
-	return emplace(pos, value);
+	return emplace(pos, std::move(value));
 }
 
 template<typename Type, typename Allocator>
@@ -668,7 +668,7 @@ my_Vector<Type, Allocator>::insert(const_iterator pos, size_type count, const_re
 
 		pointer new_data_for_insert = std::uninitialized_copy(begin(), it, new_data);
 		std::uninitialized_fill(new_data_for_insert, new_data_for_insert + count, value);
-		std::uninitialized_copy(it, end(), new_data_for_insert);
+		std::uninitialized_copy(it, end(), new_data_for_insert + count);
 
 		clear_old_memory();
 		m_data = new_data;
@@ -683,15 +683,10 @@ my_Vector<Type, Allocator>::insert(const_iterator pos, size_type count, const_re
 	else
 	{
 		std::uninitialized_move(end() - count, end(), end());
-		std::move_backward(it, end() - count, end());
-		iterator current = end(), last = end() + count;
-		size_type diff = m_size - home_dist;
-		for (; current != last; ++m_size, ++current)
-		{
-			al.construct(&*current, value);
-			// here end points to previously created data
-			std::swap(*current, *(current - diff));
-		} // it will point to the element after the last only here
+		size_type dist = std::distance(it, end());
+		std::move_backward(it, end() - count, end() - dist);
+		std::fill(it, it + count, value);
+		m_size += count;
 	}
 	return it;
 }
@@ -715,11 +710,8 @@ my_Vector<Type, Allocator>::insert(const_iterator pos, Iterator first, Iterator 
 		pointer new_data = al.allocate(new_capacity);
 		
 		pointer new_data_for_insert = std::uninitialized_copy(begin(), it, new_data);
-		for (;first != last; ++first, ++new_data_for_insert)
-		{
-			al.construct(new_data_for_insert, *first);
-		}
-		std::uninitialized_copy(it, end(), new_data_for_insert);
+		pointer data_after_insert = std::uninitialized_copy(first, last, new_data_for_insert);
+		std::uninitialized_copy(it, end(), data_after_insert);
 		
 		clear_old_memory();
 		m_data = new_data;
@@ -728,21 +720,16 @@ my_Vector<Type, Allocator>::insert(const_iterator pos, Iterator first, Iterator 
 	}
 	else if (it == end())
 	{
-		for (; first != last; ++first, ++m_size)
-		{
-			al.construct(&*end(), *first);
-		}
+		std::uninitialized_copy(last, first, end());
+		m_size += outsider_size;
 	}
 	else
 	{
-		iterator current = end();
-		size_type diff = m_size - home_dist;
-		for (; first != last; ++first, ++m_size, ++current)
-		{
-			al.construct(&*current, *first);
-			// here end points to previously created data
-			std::swap(*current, *(current - diff));
-		} // it will point to the element after the last only here
+		std::uninitialized_move(end() - outsider_size, end(), end());
+		size_type dist = std::distance(it, end());
+		std::move_backward(it, end() - outsider_size, end() - dist);
+		std::uninitialized_copy(last, first, it);
+		m_size += outsider_size;
 	}
 	return it;
 }
@@ -778,10 +765,7 @@ my_Vector<Type, Allocator>::erase(const_iterator first, const_iterator last)
 
 	iterator beg = first;
 	iterator fin = last;
-	for (; first != last; ++first)
-	{
-		al.destroy(&*first);
-	}
+	std::destroy(first, last);
 	std::move(fin, end(), beg);
 	m_size -= std::distance(beg, fin);
 	return beg;
@@ -795,10 +779,7 @@ void my_Vector<Type, Allocator>::clear()
 		return;
 	}
 
-	for (size_type i = 0; i < m_size; i++)
-	{
-		al.destroy(m_data + i);
-	}
+	std::destroy(begin(), end());
 	m_size = 0;
 }
 
@@ -807,46 +788,8 @@ void my_Vector<Type, Allocator>::shrink_to_fit()
 {
 	if (m_capacity > m_size >= 0)
 	{
-		pointer temp = al.allocate(m_size);
-		for (size_type i = 0; i < m_size; i++)
-		{
-			al.construct(temp + i, m_data[i]);
-		}
-		for (size_type i = 0; i < m_size; i++)
-		{
-			al.destroy(m_data + i);
-		}
-		al.deallocate(m_data, m_capacity);
-		m_capacity = m_size;
-		m_data = temp;
+		reserve_body(m_size);
 	}
-}
-
-//template<typename Type, typename Allocator>
-//template<typename>
-//my_Vector<Type, Allocator>::my_Vector(Iterator start, Iterator end)
-//{
-//	int size = std::distance(start, end);
-//	reserve(size);
-//	std::
-//  (m_data, start, size);
-//}
-
-//not efficient
-template<typename Type, typename Allocator>
-template<typename ...Args>
-void my_Vector<Type, Allocator>::pretty_emplace(iterator iter, Args&&...args)
-{
-	int dist = std::distance(begin(), iter);
-	// don't forget that reserve(if m_size >= m_capacity) invalidates all iterators
-	reallocate_if_small();
-	++m_size;
-
-	iterator emplaced = begin();
-	std::advance(emplaced, dist);
-
-	std::move_backward(emplaced, --end(), end());
-	*emplaced = Type(std::forward<Args>(args)...);
 }
 
 template<typename Type, typename Allocator>
@@ -884,12 +827,10 @@ inline typename my_Vector<Type, Allocator>::iterator my_Vector<Type, Allocator>:
 	}
 	else
 	{
-		al.construct(&*end(), value_type());
+		al.construct(&*end(), std::forward<Args>(args)...);
 		++m_size;
 
 		std::move_backward(iter, --end(), end());
-
-		*iter = Type(std::forward<Args>(args)...);
 	}
 	return iter;
 }
@@ -935,14 +876,9 @@ inline void my_Vector<Type, Allocator>::resize(size_type count, const_reference 
 			m_data = new_data;
 			m_capacity = new_capacity;
 		}
-		iterator iter = end();
 		size_type new_elems = count - m_size;
-		for (size_type i = 0; i < new_elems; i++)
-		{
-			al.construct(&*iter, value);
-			++m_size;
-			++iter;
-		}
+		std::uninitialized_fill(end(), end() + new_elems, value);
+		m_size += new_elems;
 	}
 	else
 	{
@@ -951,18 +887,6 @@ inline void my_Vector<Type, Allocator>::resize(size_type count, const_reference 
 		erase(begin() + count, end());
 		m_data = new_data;
 		m_size = count;
-	}
-}
-
-template<typename Type, typename Allocator>
-typename my_Vector<Type, Allocator>::pointer 
-my_Vector<Type, Allocator>::reallocate_if_small(size_type size)
-{
-	// this function is wrong because here we need to change capacity but we can't
-	// because we need to still clear old memory but we now that here we use our modifier
-	if (size >= m_capacity)
-	{
-		return al.allocate(size * m_capacity_modifier);
 	}
 }
 
@@ -977,6 +901,19 @@ void my_Vector<Type, Allocator>::clear_old_memory()
 {
 	std::destroy(begin(), end());
 	al.deallocate(m_data, m_capacity);
+}
+
+template<typename Type, typename Allocator>
+inline void my_Vector<Type, Allocator>::reserve_body(size_type size)
+{
+	if (size >= m_size)
+	{
+		pointer temp = al.allocate(size);
+		std::uninitialized_move(m_data, m_data + m_size, temp);
+		clear_old_memory();
+		m_capacity = size;
+		m_data = temp;
+	}
 }
 
 template<typename T, typename Alloc> 
