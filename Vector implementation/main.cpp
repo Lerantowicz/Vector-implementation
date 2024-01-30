@@ -41,6 +41,27 @@ int main()
 	// when: assigning one vector to another
 	string_vector = temp;
 
+	auto a = string_vector[0];
+	auto a1 = string_vector.at(0);
+	
+
+	
+	auto a2 = string_vector[string_vector.size() - 1];
+	auto a3 = string_vector.at(string_vector.size() - 1);
+	
+
+	
+	auto a4 = string_vector[0];
+	auto a5 = string_vector.front();
+	
+
+	
+	auto a6 = string_vector[string_vector.size() - 1];
+	auto a7 = string_vector.back();
+	
+
+	
+
 	print(string_vector.begin(), string_vector.end());
 	return 0;
 }

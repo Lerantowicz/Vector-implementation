@@ -537,28 +537,28 @@ template<typename Type, typename Allocator>
 inline typename my_Vector<Type, Allocator>::reference 
 my_Vector<Type, Allocator>::front()
 {
-	return m_data[m_size - 1];
+	return m_data[0];
 }
 
 template<typename Type, typename Allocator>
 inline typename my_Vector<Type, Allocator>::const_reference 
 my_Vector<Type, Allocator>::front() const
 {
-	return m_data[m_size - 1];
+	return m_data[0];
 }
 
 template<typename Type, typename Allocator>
 inline typename my_Vector<Type, Allocator>::reference 
 my_Vector<Type, Allocator>::back()
 {
-	return m_data[0];
+	return m_data[m_size - 1];
 }
 
 template<typename Type, typename Allocator>
 inline typename my_Vector<Type, Allocator>::const_reference 
 my_Vector<Type, Allocator>::back() const
 {
-	return m_data[0];
+	return m_data[m_size - 1];
 }
 
 template<typename Type, typename Allocator>
